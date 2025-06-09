@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "LINE公式Bot 自動返信",
   "main": "index.js",
-  "type": "module",
   "scripts": {
     "start": "node index.js"
   },
