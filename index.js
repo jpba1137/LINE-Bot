@@ -1,13 +1,37 @@
 const express = require('express');
-const app = express();
-app.use(express.json());
+const line = require('@line/bot-sdk');
 
-app.post('/webhook', (req, res) => {
-  console.log('受信:', req.body); // サーバーログ確認用（何か来たか見るだけ）
-  res.status(200).end(); // 必ず200を返す。ここが最重要！
+const config = {
+  channelAccessToken: process.env.LINE_ACCESS_TOKEN,
+  channelSecret: process.env.LINE_CHANNEL_SECRET,
+};
+
+const client = new line.Client(config);
+const app = express();
+
+app.post('/webhook', line.middleware(config), (req, res) => {
+  Promise
+    .all(req.body.events.map(handleEvent))
+    .then((result) => res.json(result))
+    .catch((err) => {
+      console.error(err);
+      res.status(500).end();
+    });
 });
 
-const PORT = process.env.PORT || 3000;
+function handleEvent(event) {
+  // テキストメッセージ以外は無視
+  if (event.type !== 'message' || event.message.type !== 'text') {
+    return Promise.resolve(null);
+  }
+  // 送られたテキストをそのまま返すだけのシンプルBot
+  return client.replyMessage(event.replyToken, {
+    type: 'text',
+    text: event.message.text,
+  });
+}
+
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
-  console.log('サーバー起動: ', PORT);
+  console.log(`Server running at PORT ${PORT}`);
 });
