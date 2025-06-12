@@ -8,6 +8,7 @@ const config = {
 
 const app    = express();
 const client = new line.Client(config);
+console.log('[DEBUG] secret length =', (process.env.LINE_CHANNEL_SECRET || '').length);
 
 // Webhook エンドポイント
 app.post('/webhook', line.middleware(config), (req, res) => {
