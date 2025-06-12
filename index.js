@@ -1,38 +1,37 @@
 const express = require('express');
-const { Client, middleware } = require('@line/bot-sdk');
+const line    = require('@line/bot-sdk');
 
 const config = {
-  channelAccessToken: process.env.LINE_ACCESS_TOKEN,
-  channelSecret:      process.env.LINE_CHANNEL_SECRET
+  channelAccessToken : process.env.LINE_ACCESS_TOKEN,
+  channelSecret      : process.env.LINE_CHANNEL_SECRET,
 };
 
-const client = new Client(config);
 const app    = express();
+const client = new line.Client(config);
 
-/* ❶ Webhook 入口 */
-app.post('/webhook', middleware(config), (req, res) => {
-  /* LINE 側には 200 を即返す（タイムアウト防止）*/
-  res.status(200).end();
-
-  /* 受け取ったイベントをすべて処理 */
+// Webhook エンドポイント
+app.post('/webhook', line.middleware(config), (req, res) => {
   Promise
+    // すべてのイベントを並列処理
     .all(req.body.events.map(handleEvent))
-    .catch(err => console.error('handleEvent Error:', err));
+    .then(() => res.status(200).end())
+    .catch(err => {
+      console.error('[ERROR]', err);
+      res.status(500).end();
+    });
 });
 
-/* ❷ イベント処理 */
+// 1 件のイベント処理
 function handleEvent(event) {
-  // テキストメッセージ以外は無視
   if (event.type !== 'message' || event.message.type !== 'text') {
+    // テキスト以外は無視
     return Promise.resolve(null);
   }
-  // そのままオウム返し
-  return client.replyMessage(event.replyToken, {
-    type: 'text',
-    text: event.message.text
-  });
+
+  // 受け取ったテキストをそのまま返す
+  const replyText = `Echo: ${event.message.text}`;
+  return client.replyMessage(event.replyToken, { type: 'text', text: replyText });
 }
 
-/* ❸ 起動 */
-const port = process.env.PORT || 3000;
-app.listen(port, () => console.log(`Server running at port ${port}`));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server running at port ${PORT}`));
