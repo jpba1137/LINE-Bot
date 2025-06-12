@@ -1,40 +1,38 @@
 const express = require('express');
 const { Client, middleware } = require('@line/bot-sdk');
 
-// 環境変数から値を取得
 const config = {
   channelAccessToken: process.env.LINE_ACCESS_TOKEN,
-  channelSecret: process.env.LINE_CHANNEL_SECRET
+  channelSecret:      process.env.LINE_CHANNEL_SECRET
 };
 
-const app = express();
+const client = new Client(config);
+const app    = express();
 
-// webhookエンドポイント
+/* ❶ Webhook 入口 */
 app.post('/webhook', middleware(config), (req, res) => {
+  /* LINE 側には 200 を即返す（タイムアウト防止）*/
+  res.status(200).end();
+
+  /* 受け取ったイベントをすべて処理 */
   Promise
     .all(req.body.events.map(handleEvent))
-    .then((result) => res.json(result));
+    .catch(err => console.error('handleEvent Error:', err));
 });
 
-// メッセージのハンドラ
+/* ❷ イベント処理 */
 function handleEvent(event) {
   // テキストメッセージ以外は無視
   if (event.type !== 'message' || event.message.type !== 'text') {
     return Promise.resolve(null);
   }
-
-  // オウム返し（送られた内容をそのまま返す）
+  // そのままオウム返し
   return client.replyMessage(event.replyToken, {
     type: 'text',
     text: event.message.text
   });
 }
 
-// LINE Botクライアントの生成
-const client = new Client(config);
-
-// ポート指定（Renderの場合は process.env.PORT 推奨）
+/* ❸ 起動 */
 const port = process.env.PORT || 3000;
-app.listen(port, () => {
-  console.log(`Server running at port ${port}`);
-});
+app.listen(port, () => console.log(`Server running at port ${port}`));
